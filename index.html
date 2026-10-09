@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cyber Arcade Pro | Multi-Device Multiplayer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=9">
+  <!-- PeerJS for WebRTC Direct Multiplayer Connection Fallback -->
+  <script src="peerjs.min.js"></script>
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="game-container">
+    <!-- ============================================== -->
+    <!-- SCREEN 1: STEP-BY-STEP LANDING & SETUP WIZARD  -->
+    <!-- ============================================== -->
+    <div id="screen-landing" class="screen-view">
+      <!-- Landing Hero Banner -->
+      <header class="landing-hero">
+        <div class="landing-badge">⚡ MULTI-DEVICE CYBER ARCADE 🪙</div>
+        <h1 class="landing-title">CYBER ARCADE <span class="badge-neon">PRO</span></h1>
+        <p class="landing-subtitle">Play Tic-Tac-Toe, Chess, and 3D Coin Toss across your devices!</p>
+
+        <!-- Dynamic Invite Banner (Shows if URL has ?room=XYZ) -->
+        <div id="invite-detected-banner" class="invite-detected-banner hidden">
+          <span class="invite-banner-icon">💌</span>
+          <div class="invite-banner-content">
+            <strong>Game Invite Detected!</strong>
+            <span>Your friend invited you to join Room <code id="detected-room-code">------</code></span>
+          </div>
+          <button id="btn-quick-accept-invite" class="action-btn small primary">Join Match ⚔️</button>
+        </div>
+      </header>
+
+      <!-- STEP 1: SELECT GAME -->
+      <section class="wizard-step-card" id="wizard-step-game">
+        <div class="step-header">
+          <span class="step-number">1</span>
+          <div>
+            <h3>Choose Game</h3>
+            <p>Pick what you want to play</p>
+          </div>
+        </div>
+        <div class="game-select-grid">
+          <div class="game-card-pick active" data-game="ttt" id="pick-game-ttt">
+            <div class="game-pick-icon">⚡</div>
+            <div class="game-pick-info">
+              <h4>Tic-Tac-Toe Pro</h4>
+              <p>Strategic 3x3 battle with blitz timers, AI, and strike celebrations</p>
+            </div>
+            <span class="pick-check">✔</span>
+          </div>
+          <div class="game-card-pick" data-game="coin" id="pick-game-coin">
+            <div class="game-pick-icon">🪙</div>
+            <div class="game-pick-info">
+              <h4>Coin Toss (Heads & Tails)</h4>
+              <p>3D animated coin flip with cryptographic fair AI decider & streaks</p>
+            </div>
+            <span class="pick-check">✔</span>
+          </div>
+          <div class="game-card-pick" data-game="chess" id="pick-game-chess">
+            <div class="game-pick-icon">♟️</div>
+            <div class="game-pick-info">
+              <h4>Chess Pro</h4>
+              <p>Play Chess against AI, locally, or online with a friend</p>
+            </div>
+            <span class="pick-check">✔</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 2: SELECT MODE -->
+      <section class="wizard-step-card" id="wizard-step-mode">
+        <div class="step-header">
+          <span class="step-number">2</span>
+          <div>
+            <h3>Choose Match Mode</h3>
+            <p>Select who you want to play with</p>
+          </div>
+        </div>
+        <div class="mode-select-grid">
+          <div class="mode-card-pick active" data-mode="ai" id="pick-mode-ai">
+            <div class="mode-pick-icon">🤖</div>
+            <div class="mode-pick-info">
+              <h4>vs AI</h4>
+              <p>Single player against Cyber AI</p>
+            </div>
+          </div>
+          <div class="mode-card-pick" data-mode="pvp" id="pick-mode-pvp">
+            <div class="mode-pick-icon">👥</div>
+            <div class="mode-pick-info">
+              <h4>Local 2-Player</h4>
+              <p>Pass & Play on this device</p>
+            </div>
+          </div>
+          <div class="mode-card-pick" data-mode="online" id="pick-mode-online">
+            <div class="mode-pick-icon">🌐</div>
+            <div class="mode-pick-info">
+              <h4>Online Friend</h4>
+              <p>Play on 2 devices via link</p>
+            </div>
+            <span class="badge-mini-glow">MULTI-DEVICE</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- STEP 3: CUSTOMIZE PROFILE & LAUNCH -->
+      <section class="wizard-step-card" id="wizard-step-profile">
+        <div class="step-header">
+          <span class="step-number">3</span>
+          <div>
+            <h3>Profile & Match Setup</h3>
+            <p>Set your player profile and match settings</p>
+          </div>
+        </div>
+
+        <div class="setup-form-body">
+          <!-- ✨ SAVED PROFILE BANNER (shown when returning player is detected) -->
+          <div id="saved-profile-banner" class="saved-profile-banner hidden">
+            <div class="saved-profile-inner">
+              <div class="saved-profile-avatar-wrap">
+                <img id="saved-profile-avatar" class="saved-profile-img" src="" alt="Saved Avatar">
+                <span id="saved-profile-emoji" class="saved-profile-emoji">🔥</span>
+              </div>
+              <div class="saved-profile-info">
+                <span class="saved-profile-label">👋 Welcome back!</span>
+                <strong id="saved-profile-name" class="saved-profile-name">Player 1</strong>
+                <span class="saved-profile-sub">Your profile was saved automatically</span>
+              </div>
+              <div class="saved-profile-actions">
+                <button id="btn-use-saved-profile" class="action-btn primary small">✅ Use This Profile</button>
+                <button id="btn-edit-profile" class="action-btn secondary small">✏️ Edit</button>
+                <button id="btn-clear-profile" class="action-btn danger small">🗑️ Clear</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Profile Customizer Box (hidden when saved profile banner is shown) -->
+          <div id="profile-edit-area" class="profile-setup-box">
+            <div class="form-group">
+              <label for="landing-name-input">Your Display Name</label>
+              <input type="text" id="landing-name-input" class="cyber-input" maxlength="15" value="Player 1" placeholder="Enter your name">
+            </div>
+
+            <div class="form-group">
+              <label>Avatar / Photo</label>
+              <div class="avatar-select-row">
+                <img id="landing-avatar-preview" class="avatar-preview" src="" alt="Avatar Preview">
+                <div class="avatar-pick-options">
+                  <label class="cyber-file-btn" for="landing-file-input">
+                    📁 Upload Photo
+                  </label>
+                  <input type="file" id="landing-file-input" accept="image/*" class="hidden-file-input">
+                  <div class="avatar-presets" id="landing-avatar-presets"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Profile Emoji Badge</label>
+              <div class="emoji-presets" id="landing-emoji-presets"></div>
+            </div>
+          </div>
+
+
+          <!-- DYNAMIC SECTION: AI Settings -->
+          <div id="setup-section-ai" class="mode-setup-section">
+            <div class="setup-controls-row">
+              <div class="form-group">
+                <label for="landing-ai-difficulty">AI Level</label>
+                <select id="landing-ai-difficulty" class="cyber-select">
+                  <option value="easy">Easy (Casual)</option>
+                  <option value="medium" selected>Medium (Tactical)</option>
+                  <option value="hard">Master (Unbeatable Minimax)</option>
+                </select>
+              </div>
+              <div class="form-group" id="landing-timer-group">
+                <label for="landing-timer-select">Turn Timer</label>
+                <select id="landing-timer-select" class="cyber-select">
+                  <option value="5">⚡ 5s (Blitz)</option>
+                  <option value="10" selected>⏱️ 10s (Fast)</option>
+                  <option value="15">⏳ 15s (Standard)</option>
+                  <option value="30">🛡️ 30s (Relaxed)</option>
+                  <option value="0">♾️ No Limit</option>
+                </select>
+              </div>
+            </div>
+            <button id="btn-start-ai-game" class="action-btn primary large-btn full-width">
+              <span>🚀</span> Start Game vs AI
+            </button>
+          </div>
+
+          <!-- DYNAMIC SECTION: Local 2-Player -->
+          <div id="setup-section-pvp" class="mode-setup-section hidden">
+            <div class="form-group">
+              <label for="landing-p2-name-input">Player 2 Display Name</label>
+              <input type="text" id="landing-p2-name-input" class="cyber-input" maxlength="15" value="Player 2">
+            </div>
+            <button id="btn-start-pvp-game" class="action-btn primary large-btn full-width">
+              <span>👥</span> Start 2-Player Match
+            </button>
+          </div>
+
+          <!-- DYNAMIC SECTION: Online Multiplayer (Create or Join) -->
+          <div id="setup-section-online" class="mode-setup-section hidden">
+            <p id="online-chess-info" class="online-chess-info hidden">Online Chess is ready. The host plays White and your friend plays Black.</p>
+            <!-- Online Sub-Tabs -->
+            <div class="online-subtabs">
+              <button id="subtab-create-room" class="subtab-btn active">➕ Create Room (Host)</button>
+              <button id="subtab-join-room" class="subtab-btn">🔗 Join Friend's Room</button>
+            </div>
+
+            <!-- Panel A: CREATE ROOM -->
+            <div id="panel-create-room" class="subpanel-content">
+              <p class="panel-desc">Create a private game room. A unique invite link will be generated for your friend to play on their device.</p>
+              
+              <div class="form-group">
+                <label for="online-turn-timer-select">Turn Timer for Room</label>
+                <select id="online-turn-timer-select" class="cyber-select">
+                  <option value="5">⚡ 5s (Blitz)</option>
+                  <option value="10" selected>⏱️ 10s (Fast)</option>
+                  <option value="15">⏳ 15s (Standard)</option>
+                  <option value="30">🛡️ 30s (Relaxed)</option>
+                  <option value="0">♾️ No Limit</option>
+                </select>
+              </div>
+
+              <button id="btn-create-online-room" class="action-btn primary large-btn full-width">
+                <span>🎮</span> Create Room & Generate Invite Link
+              </button>
+
+              <!-- Waiting Room Lobby (Appears after creating) -->
+              <div id="landing-room-lobby" class="room-lobby-box hidden">
+                <div class="host-radar-anim">
+                  <span class="radar-circle"></span>
+                  <span class="radar-dot"></span>
+                </div>
+                <div class="lobby-info">
+                  <h4 id="lobby-waiting-title">Room Created! Waiting for Friend...</h4>
+                  <p>Send this link to your friend on their laptop or phone:</p>
+                </div>
+                <div class="lobby-links-stack">
+                  <div class="lobby-link-item">
+                    <span class="lobby-link-title">🌐 Public Internet Link (Anywhere / Mobile Data):</span>
+                    <div class="copy-input-group">
+                      <input type="text" id="landing-invite-input" class="cyber-input invite-input" readonly value="">
+                      <button id="btn-copy-landing-link" class="action-btn primary copy-btn">📋 Copy Public</button>
+                    </div>
+                  </div>
+                  <div class="lobby-link-item">
+                    <span class="lobby-link-title">👥 Direct Same Wi-Fi Link (Permanent & Ultra-Fast):</span>
+                    <div class="copy-input-group">
+                      <input type="text" id="landing-wifi-input" class="cyber-input invite-input" readonly value="">
+                      <button id="btn-copy-wifi-link" class="action-btn secondary copy-btn">📋 Copy Wi-Fi</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="room-code-tag">
+                  <span>Room Code: <strong id="landing-room-code-display">------</strong></span>
+                </div>
+                <div id="lobby-friend-joined" class="lobby-friend-joined hidden">
+                  <span>🟢 <strong id="lobby-friend-name">Friend</strong> connected! Entering match...</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel B: JOIN ROOM -->
+            <div id="panel-join-room" class="subpanel-content hidden">
+              <p class="panel-desc">Enter the Room Code or paste the full Invite Link sent by your friend:</p>
+              <div class="form-group">
+                <label for="landing-join-input">Room Code or Invite Link</label>
+                <input type="text" id="landing-join-input" class="cyber-input" placeholder="e.g. CYBER-8K2F or paste full URL">
+              </div>
+              <button id="btn-join-online-room" class="action-btn primary large-btn full-width">
+                <span>🚀</span> Connect & Join Match
+              </button>
+              <div id="landing-join-status" class="join-status-banner hidden"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- SCREEN 2: ACTIVE GAME ARENA                    -->
+    <!-- ============================================== -->
+    <div id="screen-game" class="screen-view hidden">
+      <!-- Game Arena Header -->
+      <header class="game-header">
+        <div class="header-left-group">
+          <button id="btn-back-to-lobby" class="action-btn secondary small" title="Return to Landing Lobby">
+            <span>◀</span> Lobby
+          </button>
+          <div class="logo-area">
+            <span class="game-icon" id="arena-header-icon">⚡</span>
+            <h2 id="arena-game-title">Tic-Tac-Toe <span class="badge-neon">PRO</span></h2>
+          </div>
+        </div>
+
+        <!-- Online Multiplayer Status Badge -->
+        <div id="online-badge" class="online-status-badge hidden" title="Online Match Active">
+          <span class="status-pulse-dot"></span>
+          <span id="online-badge-text">Online</span>
+          <button id="btn-quick-copy-link" class="badge-action-btn" title="Copy Invite Link">🔗 Invite</button>
+          <button id="btn-disconnect-online" class="badge-action-btn danger" title="Disconnect">✕</button>
+        </div>
+
+        <div class="header-controls">
+          <div class="match-timer-box" title="Match Stopwatch">
+            <span class="timer-icon">⏱️</span>
+            <span id="match-timer-display">00:00</span>
+          </div>
+          <button id="btn-sound" class="btn-icon" aria-label="Toggle Sound" title="Sound Effects">
+            <span id="sound-icon">🔊</span>
+          </button>
+          <button id="btn-customize-open" class="btn-icon" aria-label="Customize Profiles" title="Customize Profiles">
+            <span>⚙️</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Top Navigation Tabs (Switch Game inside arena) -->
+      <nav class="game-nav-bar" id="arena-game-nav">
+        <button id="arena-nav-ttt" class="game-nav-btn active">
+          <span class="nav-icon">⚡</span>
+          <span class="nav-label">Tic-Tac-Toe</span>
+        </button>
+        <button id="arena-nav-coin" class="game-nav-btn">
+          <span class="nav-icon">🪙</span>
+          <span class="nav-label">Coin Toss</span>
+          <span class="badge-mini">FAIR AI</span>
+        </button>
+        <button id="arena-nav-chess" class="game-nav-btn">
+          <span class="nav-icon">♟️</span>
+          <span class="nav-label">Chess</span>
+          <span class="badge-mini">MINIMAX</span>
+        </button>
+      </nav>
+
+      <!-- -------------------------------------------- -->
+      <!-- ARENA VIEW A: TIC-TAC-TOE PRO               -->
+      <!-- -------------------------------------------- -->
+      <div id="view-tic-tac-toe" class="game-view-panel">
+        <!-- Players Battle Arena Cards -->
+        <section class="players-arena">
+          <!-- Player 1 Card -->
+          <div class="player-card active-turn" id="player1-card">
+            <div class="card-turn-glow"></div>
+            <div class="player-avatar-wrap">
+              <img id="p1-avatar-img" class="avatar-img" src="" alt="Player 1" />
+              <span class="player-emoji-badge" id="p1-emoji-badge">🔥</span>
+              <span class="turn-indicator-pill" id="p1-turn-pill">MY TURN</span>
+              <div class="speech-bubble" id="p1-speech-bubble"></div>
+            </div>
+
+            <div class="player-meta">
+              <div class="player-name-row">
+                <h3 id="p1-name-display" class="player-name">Player 1</h3>
+                <span class="player-symbol-pill p1-pill">X</span>
+              </div>
+              <div class="score-display">Wins: <span id="p1-score">0</span></div>
+            </div>
+
+            <!-- Turn Timer Gauge -->
+            <div class="turn-timer-wrap">
+              <div class="turn-timer-bar-bg">
+                <div class="turn-timer-bar" id="p1-timer-bar"></div>
+              </div>
+              <div class="timer-number" id="p1-timer-text">10s</div>
+            </div>
+
+            <!-- Quick Reaction Reactions -->
+            <div class="reactions-dock" data-player="p1">
+              <button class="rxn-btn" data-emoji="🔥">🔥</button>
+              <button class="rxn-btn" data-emoji="😎">😎</button>
+              <button class="rxn-btn" data-emoji="💀">💀</button>
+              <button class="rxn-btn" data-emoji="🧠">🧠</button>
+            </div>
+            <div class="floating-reaction-container" id="p1-floating-rxn"></div>
+          </div>
+
+          <!-- VS Divider -->
+          <div class="vs-divider">
+            <div class="vs-circle">VS</div>
+            <div class="ties-counter">Ties: <span id="tie-score">0</span></div>
+          </div>
+
+          <!-- Player 2 / AI Card -->
+          <div class="player-card" id="player2-card">
+            <div class="card-turn-glow"></div>
+            <div class="player-avatar-wrap">
+              <img id="p2-avatar-img" class="avatar-img" src="" alt="Player 2" />
+              <span class="player-emoji-badge" id="p2-emoji-badge">🤖</span>
+              <span class="turn-indicator-pill" id="p2-turn-pill">MY TURN</span>
+              <div class="speech-bubble" id="p2-speech-bubble"></div>
+            </div>
+
+            <div class="player-meta">
+              <div class="player-name-row">
+                <h3 id="p2-name-display" class="player-name">Cyber AI</h3>
+                <span class="player-symbol-pill p2-pill">O</span>
+              </div>
+              <div class="score-display">Wins: <span id="p2-score">0</span></div>
+            </div>
+
+            <!-- Turn Timer Gauge -->
+            <div class="turn-timer-wrap">
+              <div class="turn-timer-bar-bg">
+                <div class="turn-timer-bar" id="p2-timer-bar"></div>
+              </div>
+              <div class="timer-number" id="p2-timer-text">10s</div>
+            </div>
+
+            <!-- Quick Reaction Reactions -->
+            <div class="reactions-dock" data-player="p2">
+              <button class="rxn-btn" data-emoji="🤖">🤖</button>
+              <button class="rxn-btn" data-emoji="⚡">⚡</button>
+              <button class="rxn-btn" data-emoji="😱">😱</button>
+              <button class="rxn-btn" data-emoji="🎯">🎯</button>
+            </div>
+            <div class="floating-reaction-container" id="p2-floating-rxn"></div>
+          </div>
+        </section>
+
+        <!-- Notification Banner with Auto-Restart Timer -->
+        <div class="game-status-banner" id="status-banner">
+          <div class="status-content-wrap">
+            <span id="status-text">Player 1's Turn — Make your move!</span>
+            <div id="auto-restart-pill" class="auto-restart-pill hidden">
+              <span class="auto-restart-label">Next match in <strong id="auto-restart-num">3</strong>s</span>
+              <button id="btn-skip-auto-restart" class="auto-skip-btn">Play Now ⏩</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3x3 Board -->
+        <section class="board-wrapper">
+          <div class="game-board" id="board">
+            <button class="board-cell" data-index="0" aria-label="Cell 1"></button>
+            <button class="board-cell" data-index="1" aria-label="Cell 2"></button>
+            <button class="board-cell" data-index="2" aria-label="Cell 3"></button>
+            <button class="board-cell" data-index="3" aria-label="Cell 4"></button>
+            <button class="board-cell" data-index="4" aria-label="Cell 5"></button>
+            <button class="board-cell" data-index="5" aria-label="Cell 6"></button>
+            <button class="board-cell" data-index="6" aria-label="Cell 7"></button>
+            <button class="board-cell" data-index="7" aria-label="Cell 8"></button>
+            <button class="board-cell" data-index="8" aria-label="Cell 9"></button>
+            <svg class="win-strike-svg" id="win-strike-svg">
+              <line id="win-strike-line" x1="0" y1="0" x2="0" y2="0" />
+            </svg>
+          </div>
+        </section>
+
+        <!-- Quick Chat Dock -->
+        <section class="quick-chat-section" id="quick-chat-section">
+          <span class="chat-hint-label">💬 Taunts:</span>
+          <div class="chat-chips-scroll">
+            <button class="chat-chip" data-msg="Good luck! ⚡">⚡ Good Luck!</button>
+            <button class="chat-chip" data-msg="Nice move! 🎯">🎯 Nice Move!</button>
+            <button class="chat-chip" data-msg="Close one! 😱">😱 Close One!</button>
+            <button class="chat-chip" data-msg="Thinking... 🧠">🧠 Thinking...</button>
+            <button class="chat-chip" data-msg="Good Game! 🏆">🏆 Good Game!</button>
+            <button class="chat-chip" data-msg="Rematch? 🔄">🔄 Rematch?</button>
+          </div>
+        </section>
+
+        <!-- Action Footer -->
+        <footer class="game-actions">
+          <button id="btn-ttt-pause" class="action-btn secondary" aria-pressed="false">
+            <span>⏸️</span> Pause
+          </button>
+          <button id="btn-restart-round" class="action-btn primary">
+            <span>🔄</span> Restart Game
+          </button>
+          <button id="btn-reset-scores" class="action-btn secondary">
+            <span>🏆</span> Reset Scores
+          </button>
+          <button id="btn-invite-friend-action" class="action-btn secondary">
+            <span>🌐</span> Invite Link
+          </button>
+        </footer>
+      </div>
+
+      <!-- -------------------------------------------- -->
+      <!-- ARENA VIEW B: COIN TOSS (HEADS & TAILS)     -->
+      <!-- -------------------------------------------- -->
+      <div id="view-coin-toss" class="game-view-panel hidden">
+        <!-- Coin Toss Players Arena -->
+        <section class="players-arena coin-arena-cards">
+          <!-- Player 1 Card -->
+          <div class="player-card active-turn" id="coin-p1-card">
+            <div class="card-turn-glow"></div>
+            <div class="player-avatar-wrap">
+              <img id="coin-p1-avatar-img" class="avatar-img" src="" alt="Player 1" />
+              <span class="player-emoji-badge" id="coin-p1-emoji-badge">🔥</span>
+            </div>
+            <div class="player-meta">
+              <div class="player-name-row">
+                <h3 id="coin-p1-name" class="player-name">Player 1</h3>
+                <span class="player-symbol-pill p1-pill" id="coin-p1-choice-badge">👑 HEADS</span>
+              </div>
+              <div class="score-display">Wins: <span id="coin-p1-score">0</span></div>
+            </div>
+          </div>
+
+          <!-- VS Divider & Streak -->
+          <div class="vs-divider">
+            <div class="vs-circle">VS</div>
+            <div class="ties-counter">Streak: <span id="coin-streak-count">0</span></div>
+          </div>
+
+          <!-- Player 2 / AI Card -->
+          <div class="player-card" id="coin-p2-card">
+            <div class="card-turn-glow"></div>
+            <div class="player-avatar-wrap">
+              <img id="coin-p2-avatar-img" class="avatar-img" src="" alt="Player 2" />
+              <span class="player-emoji-badge" id="coin-p2-emoji-badge">🤖</span>
+            </div>
+            <div class="player-meta">
+              <div class="player-name-row">
+                <h3 id="coin-p2-name" class="player-name">Cyber AI</h3>
+                <span class="player-symbol-pill p2-pill" id="coin-p2-choice-badge">⚡ TAILS</span>
+              </div>
+              <div class="score-display">Wins: <span id="coin-p2-score">0</span></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Status Banner (Single Toss Mode) -->
+        <div class="game-status-banner" id="coin-status-banner">
+          <div class="status-content-wrap">
+            <span id="coin-status-text">Pick your side (Heads or Tails) and flip the coin!</span>
+          </div>
+        </div>
+
+        <!-- 3D Coin Arena -->
+        <div class="coin-stage-wrapper">
+          <div class="coin-3d-scene">
+            <div class="coin" id="coin-element">
+              <!-- Heads Face -->
+              <div class="coin-face coin-heads">
+                <div class="coin-face-inner">
+                  <span class="coin-symbol">👑</span>
+                  <span class="coin-text">HEADS</span>
+                  <span class="coin-dots">★ ★ ★</span>
+                </div>
+              </div>
+              <!-- Tails Face -->
+              <div class="coin-face coin-tails">
+                <div class="coin-face-inner">
+                  <span class="coin-symbol">⚡</span>
+                  <span class="coin-text">TAILS</span>
+                  <span class="coin-dots">★ ★ ★</span>
+                </div>
+              </div>
+            </div>
+            <div class="coin-shadow" id="coin-shadow"></div>
+          </div>
+        </div>
+
+        <!-- Choice Selector & Flip Button -->
+        <div class="coin-controls-box">
+          <div class="prediction-selector">
+            <span class="choice-prompt-label">YOUR CALL:</span>
+            <div class="choice-buttons-row">
+              <button class="choice-pill-btn active" id="btn-call-heads" data-call="heads">
+                <span class="choice-pill-icon">👑</span>
+                <span class="choice-pill-text">HEADS</span>
+              </button>
+              <button class="choice-pill-btn" id="btn-call-tails" data-call="tails">
+                <span class="choice-pill-icon">⚡</span>
+                <span class="choice-pill-text">TAILS</span>
+              </button>
+            </div>
+          </div>
+
+          <button id="btn-flip-coin" class="action-btn primary toss-main-btn">
+            <span class="toss-icon">🪙</span>
+            <span>TOSS COIN</span>
+          </button>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="coin-stats-bar">
+          <div class="stat-pill">
+            <span class="stat-lbl">Total Flips</span>
+            <strong class="stat-num" id="stat-total-flips">0</strong>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-lbl">👑 Heads</span>
+            <strong class="stat-num" id="stat-heads-flips">0</strong>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-lbl">⚡ Tails</span>
+            <strong class="stat-num" id="stat-tails-flips">0</strong>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-lbl">Fairness</span>
+            <strong class="stat-num" id="stat-fairness-ratio">50% / 50%</strong>
+          </div>
+          <div class="stat-pill">
+            <span class="stat-lbl">Best Streak</span>
+            <strong class="stat-num" id="stat-best-streak">0</strong>
+          </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <footer class="game-actions">
+          <button id="btn-coin-pause" class="action-btn secondary" aria-pressed="false">
+            <span>⏸️</span> Pause
+          </button>
+          <button id="btn-coin-reset" class="action-btn secondary">
+            <span>🔄</span> Restart Game
+          </button>
+          <button id="btn-coin-switch-ttt" class="action-btn secondary">
+            <span>⚡</span> Play Tic-Tac-Toe
+          </button>
+        </footer>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- ARENA VIEW C: CHESS PRO                     -->
+      <!-- ============================================ -->
+      <div id="view-chess" class="game-view-panel hidden">
+        <!-- Players Battle Arena -->
+        <section class="players-arena chess-arena">
+          <!-- Player 1 Card (White) -->
+          <div class="player-card active-turn" id="chess-p1-card">
+            <div class="card-turn-glow"></div>
+            <div class="player-avatar-wrap">
+              <img id="chess-p1-avatar" class="avatar-img" src="" alt="Player 1">
+              <span class="player-emoji-badge" id="chess-p1-emoji">🔥</span>
+            </div>
+            <div class="player-meta">
+              <div class="player-name-row">
+                <h3 id="chess-p1-name" class="player-name">Player 1</h3>
+                <span class="player-symbol-pill p1-pill">♔ WHITE</span>
+              </div>
+              <div class="score-display">Wins: <span id="chess-p1-score">0</span></div>
+              <div class="chess-captured" id="chess-captured-by-p2"></div>
+            </div>
+          </div>
+
+          <!-- Status Center -->
+          <div class="status-center-col">
+            <div class="game-status-banner" id="chess-status-banner">
+              <span class="status-text" id="chess-status-text">White's turn — make your move!</span>
+            </div>
+            <div class="chess-turn-indicator">
+              <span id="chess-turn-dot" class="chess-dot chess-dot-white"></span>
+              <span id="chess-turn-label">White to move</span>
+            </div>
+          </div>
+
+          <!-- Player 2 Card (Black) -->
+          <div class="player-card" id="chess-p2-card">
+            <div class="card-turn-glow"></div>
+            <div class="player-avatar-wrap">
+              <img id="chess-p2-avatar" class="avatar-img" src="" alt="Player 2">
+              <span class="player-emoji-badge" id="chess-p2-emoji">🤖</span>
+            </div>
+            <div class="player-meta">
+              <div class="player-name-row">
+                <h3 id="chess-p2-name" class="player-name">Cyber AI</h3>
+                <span class="player-symbol-pill p2-pill">♚ BLACK</span>
+              </div>
+              <div class="score-display">Wins: <span id="chess-p2-score">0</span></div>
+              <div class="chess-captured" id="chess-captured-by-p1"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Chess Board -->
+        <section class="chess-board-section">
+          <div class="chess-board-wrap">
+            <div id="chess-board" class="chess-board"></div>
+          </div>
+        </section>
+
+        <!-- Action Footer -->
+        <footer class="game-actions">
+          <button id="btn-chess-pause" class="action-btn secondary" aria-pressed="false">
+            <span>⏸️</span> Pause
+          </button>
+          <button id="btn-chess-new-game" class="action-btn primary">
+            <span>🔄</span> Restart Game
+          </button>
+          <button id="btn-chess-undo" class="action-btn secondary">
+            <span>↩️</span> Undo
+          </button>
+          <button id="btn-chess-flip" class="action-btn secondary">
+            <span>🔄</span> Flip Board
+          </button>
+          <button id="btn-chess-reset-scores" class="action-btn secondary">
+            <span>🏆</span> Reset Scores
+          </button>
+        </footer>
+      </div>
+    </div>
+  </div>
+    </div>
+  </div>
+
+
+  <!-- ============================================== -->
+  <!-- MODAL: PROFILE CUSTOMIZATION                   -->
+  <!-- ============================================== -->
+  <div class="modal-backdrop" id="custom-modal" aria-hidden="true">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h2>Custom Player Profiles</h2>
+        <button class="modal-close-btn" id="modal-close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Player 1 Customizer -->
+        <div class="profile-edit-card">
+          <div class="profile-card-title">
+            <span class="symbol-tag p1-tag">X</span>
+            <h3>Player 1 Profile</h3>
+          </div>
+
+          <div class="form-group">
+            <label for="p1-name-input">Display Name</label>
+            <input type="text" id="p1-name-input" class="cyber-input" maxlength="15" value="Player 1">
+          </div>
+
+          <div class="form-group">
+            <label>Profile Picture</label>
+            <div class="avatar-preview-row">
+              <img id="p1-preview-img" class="avatar-preview" src="" alt="P1 Preview" />
+              <div class="avatar-upload-wrap">
+                <label class="cyber-file-btn" for="p1-file-input">
+                  📁 Upload Photo
+                </label>
+                <input type="file" id="p1-file-input" accept="image/*" class="hidden-file-input">
+                <span class="upload-hint">or choose preset:</span>
+              </div>
+            </div>
+            <div class="avatar-presets" id="p1-avatar-presets"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Profile Emoji</label>
+            <div class="emoji-presets" id="p1-emoji-presets"></div>
+          </div>
+        </div>
+
+        <!-- Player 2 Customizer -->
+        <div class="profile-edit-card">
+          <div class="profile-card-title">
+            <span class="symbol-tag p2-tag">O</span>
+            <h3 id="p2-modal-title">Player 2 Profile</h3>
+          </div>
+
+          <div class="form-group">
+            <label for="p2-name-input">Display Name</label>
+            <input type="text" id="p2-name-input" class="cyber-input" maxlength="15" value="Player 2">
+          </div>
+
+          <div class="form-group">
+            <label>Profile Picture</label>
+            <div class="avatar-preview-row">
+              <img id="p2-preview-img" class="avatar-preview" src="" alt="P2 Preview" />
+              <div class="avatar-upload-wrap">
+                <label class="cyber-file-btn" for="p2-file-input">
+                  📁 Upload Photo
+                </label>
+                <input type="file" id="p2-file-input" accept="image/*" class="hidden-file-input">
+                <span class="upload-hint">or choose preset:</span>
+              </div>
+            </div>
+            <div class="avatar-presets" id="p2-avatar-presets"></div>
+          </div>
+
+          <div class="form-group">
+            <label>Profile Emoji</label>
+            <div class="emoji-presets" id="p2-emoji-presets"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="modal-save-btn" class="action-btn primary full-width">Save & Apply Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js?v=11"></script>
+</body>
+</html>
